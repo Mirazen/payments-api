@@ -5,7 +5,7 @@ from fastapi import FastAPI
 
 from app.config import get_database_url
 from app.db import create_engine, create_session_factory, seed_tariffs
-from app.routers import payments, tariffs
+from app.routers import payments, tariffs, webhooks
 
 
 def create_app(database_url: str, *, use_pool: bool = True) -> FastAPI:
@@ -24,6 +24,7 @@ def create_app(database_url: str, *, use_pool: bool = True) -> FastAPI:
     app = FastAPI(title="payments-api", lifespan=lifespan)
     app.include_router(tariffs.router)
     app.include_router(payments.router)
+    app.include_router(webhooks.router)
     return app
 
 

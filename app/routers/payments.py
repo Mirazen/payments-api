@@ -9,13 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db import SessionDep
 from app.domain import UnknownPromoCodeError, calc_discount
 from app.models import Payment, Tariff
-from app.schemas import PaymentCreate, PaymentOut
+from app.schemas import MAX_PAYMENT_ID, PaymentCreate, PaymentOut
 
 router = APIRouter()
-
-# id - 32-битное целое в базе. Число больше этого значения не может быть id платежа,
-# а запрос с ним без проверки закончился бы ошибкой драйвера (500).
-MAX_PAYMENT_ID = 2**31 - 1
 
 
 def field_error(field: str, message: str, value: object) -> RequestValidationError:

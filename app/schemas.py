@@ -1,10 +1,14 @@
 from datetime import datetime
 from typing import Self
 
-from pydantic import BaseModel, ConfigDict, EmailStr, computed_field, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, computed_field, model_validator
 
 from app.domain import INSTALLMENT_MONTHS, build_schedule
 from app.enums import PaymentMethod, PaymentStatus
+
+# id - 32-битное целое в базе. Число больше этого значения не может быть id платежа,
+# а запрос с ним без проверки закончился бы ошибкой драйвера (500).
+MAX_PAYMENT_ID = 2**31 - 1
 
 
 class TariffOut(BaseModel):
@@ -32,6 +36,11 @@ class PaymentCreate(BaseModel):
         elif self.installment_months is not None:
             raise ValueError("installment_months is allowed only for installment method")
         return self
+
+
+class BankWebhook(BaseModel):
+    payment_id: int = Field(ge=1, le=MAX_PAYMENT_ID)
+    status: PaymentStatus
 
 
 class PaymentOut(BaseModel):
