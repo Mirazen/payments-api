@@ -6,7 +6,7 @@ from sqlalchemy import select, update
 from app.enums import PaymentStatus
 from app.models import Payment
 from app.routers import payments as payments_router
-from tests.test_payments import count_payments, payment_body
+from tests.helpers import count_payments, payment_body
 
 
 def with_key(key: str) -> dict:

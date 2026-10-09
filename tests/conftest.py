@@ -11,6 +11,7 @@ from sqlalchemy.engine import URL, make_url
 
 from app.config import get_database_url
 from app.main import create_app
+from tests.helpers import WEBHOOK_SECRET
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -63,9 +64,8 @@ def database_url():
 @pytest.fixture
 async def app(database_url):
     """Приложение с настоящим lifespan на тестовой базе, платежи очищены."""
-    application = create_app(
-        database_url, use_pool=False
-    )  # NullPool: соединения не живут между тестами
+    # use_pool=False (NullPool): соединения не живут между тестами.
+    application = create_app(database_url, WEBHOOK_SECRET, use_pool=False)
     # ASGITransport не запускает lifespan сам, поэтому запускаем его вручную.
     async with application.router.lifespan_context(application):
         async with application.state.session_factory() as session:

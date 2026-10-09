@@ -1,12 +1,13 @@
 import asyncio
 import itertools
+import json
 
 import pytest
 from sqlalchemy import update
 
 from app.enums import PaymentStatus
 from app.models import Payment
-from tests.test_payments import count_payments, payment_body
+from tests.helpers import count_payments, payment_body, post_webhook, sign
 
 PENDING = PaymentStatus.PENDING
 SUCCEEDED = PaymentStatus.SUCCEEDED
@@ -30,8 +31,14 @@ async def set_status_in_db(session_factory, payment_id: int, status: PaymentStat
         await session.commit()
 
 
+async def send_signed(client, body: dict):
+    """Вебхук с верной подписью. Саму подпись проверяют тесты в test_webhook_signature.py."""
+    raw_body = json.dumps(body).encode()
+    return await post_webhook(client, raw_body, sign(raw_body))
+
+
 async def send_webhook(client, payment_id: int, status: str):
-    return await client.post("/webhooks/bank", json={"payment_id": payment_id, "status": status})
+    return await send_signed(client, {"payment_id": payment_id, "status": status})
 
 
 async def get_status(client, payment_id: int) -> str:
@@ -123,7 +130,7 @@ async def test_webhook_for_missing_payment_is_404(client, session_factory):
 async def test_invalid_body_is_422_and_status_is_unchanged(client, body, field):
     payment_id = await create_payment(client)
 
-    response = await client.post("/webhooks/bank", json=body)
+    response = await send_signed(client, body)
 
     assert response.status_code == 422
     assert response.json()["detail"][0]["loc"] == ["body", field]

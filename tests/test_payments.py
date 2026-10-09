@@ -1,10 +1,10 @@
 from datetime import datetime
 
 import pytest
-from sqlalchemy import func, select
 
 from app.enums import PaymentMethod, PaymentStatus
 from app.models import Payment
+from tests.helpers import count_payments, payment_body
 
 TARIFF_PRICES = {"basic": 990_000, "standard": 1_990_000, "premium": 2_990_000}
 
@@ -20,18 +20,6 @@ PAYMENT_FIELDS = {
     "email",
     "created_at",
 }
-
-
-def payment_body(**overrides):
-    """Корректное тело запроса: standard, карта. Тесты меняют только нужные поля."""
-    body = {"tariff_id": "standard", "email": "student@example.com", "method": "card"}
-    body.update(overrides)
-    return body
-
-
-async def count_payments(session_factory) -> int:
-    async with session_factory() as session:
-        return await session.scalar(select(func.count()).select_from(Payment))
 
 
 # --- создание: суммы и промокод ---

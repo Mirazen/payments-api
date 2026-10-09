@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy import select, update
 
@@ -7,11 +7,12 @@ from app.domain import can_transition
 from app.enums import PaymentStatus
 from app.models import Payment
 from app.schemas import BankWebhook
+from app.security import verify_webhook_signature
 
 router = APIRouter()
 
 
-@router.post("/webhooks/bank")
+@router.post("/webhooks/bank", dependencies=[Depends(verify_webhook_signature)])
 async def bank_webhook(body: BankWebhook, session: SessionDep):
     # Из каких статусов можно перейти в новый (для "pending" таких нет).
     allowed_from = [status for status in PaymentStatus if can_transition(status, body.status)]

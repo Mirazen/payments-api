@@ -3,13 +3,13 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.config import get_database_url
+from app.config import get_database_url, get_webhook_secret
 from app.db import create_engine, create_session_factory, seed_tariffs
 from app.routers import payments, tariffs, webhooks
 
 
-def create_app(database_url: str, *, use_pool: bool = True) -> FastAPI:
-    """Собирает приложение. Тесты передают свою базу и use_pool=False."""
+def create_app(database_url: str, webhook_secret: str, *, use_pool: bool = True) -> FastAPI:
+    """Собирает приложение. Тесты передают свою базу, свой секрет и use_pool=False."""
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -22,11 +22,17 @@ def create_app(database_url: str, *, use_pool: bool = True) -> FastAPI:
         await engine.dispose()
 
     app = FastAPI(title="payments-api", lifespan=lifespan)
+    app.state.webhook_secret = webhook_secret
     app.include_router(tariffs.router)
     app.include_router(payments.router)
     app.include_router(webhooks.router)
     return app
 
 
-# Для запуска: uvicorn app.main:app. Подключения к базе здесь ещё нет, оно откроется в lifespan.
-app = create_app(get_database_url())
+def create_app_from_env() -> FastAPI:
+    """Для запуска: uvicorn app.main:create_app_from_env --factory
+
+    Настройки читаются из переменных окружения при старте, а не при импорте модуля.
+    Нет WEBHOOK_SECRET - приложение не запускается.
+    """
+    return create_app(get_database_url(), get_webhook_secret())
