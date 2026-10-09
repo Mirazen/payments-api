@@ -1,13 +1,10 @@
 import asyncio
 import itertools
-import json
 
 import pytest
-from sqlalchemy import update
 
 from app.enums import PaymentStatus
-from app.models import Payment
-from tests.helpers import count_payments, payment_body, post_webhook, sign
+from tests.helpers import count_payments, payment_body, send_signed, send_webhook, set_status_in_db
 
 PENDING = PaymentStatus.PENDING
 SUCCEEDED = PaymentStatus.SUCCEEDED
@@ -22,23 +19,6 @@ FORBIDDEN = [pair for pair in itertools.product(PaymentStatus, repeat=2) if pair
 async def create_payment(client) -> int:
     response = await client.post("/payments", json=payment_body())
     return response.json()["id"]
-
-
-async def set_status_in_db(session_factory, payment_id: int, status: PaymentStatus) -> None:
-    """Подготовка исходного статуса напрямую в базе, в обход вебхука."""
-    async with session_factory() as session:
-        await session.execute(update(Payment).where(Payment.id == payment_id).values(status=status))
-        await session.commit()
-
-
-async def send_signed(client, body: dict):
-    """Вебхук с верной подписью. Саму подпись проверяют тесты в test_webhook_signature.py."""
-    raw_body = json.dumps(body).encode()
-    return await post_webhook(client, raw_body, sign(raw_body))
-
-
-async def send_webhook(client, payment_id: int, status: str):
-    return await send_signed(client, {"payment_id": payment_id, "status": status})
 
 
 async def get_status(client, payment_id: int) -> str:

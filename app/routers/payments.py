@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import SessionDep
 from app.domain import UnknownPromoCodeError, calc_discount
+from app.enums import PaymentStatus
 from app.models import Payment, Tariff
 from app.schemas import MAX_PAYMENT_ID, PaymentCreate, PaymentOut
 
@@ -74,6 +75,25 @@ async def create_payment(
         response.status_code = 200
         return existing
     return payment
+
+
+@router.get("/payments", response_model=list[PaymentOut])
+async def list_payments(
+    session: SessionDep,
+    email: str | None = None,
+    status: PaymentStatus | None = None,
+):
+    """Список платежей по порядку создания. Фильтры необязательны и объединяются через И.
+
+    email сравнивается точно (с учётом регистра). Пагинации нет: она не нужна по ТЗ.
+    """
+    query = select(Payment).order_by(Payment.id)
+    if email is not None:
+        query = query.where(Payment.email == email)
+    if status is not None:
+        query = query.where(Payment.status == status)
+    result = await session.scalars(query)
+    return result.all()
 
 
 @router.get("/payments/{payment_id}", response_model=PaymentOut)
