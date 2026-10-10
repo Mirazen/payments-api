@@ -16,5 +16,18 @@ services:
       timeout: 3s
       retries: 15
 
+  api:
+    build: .
+    environment:
+      # Внутри сети compose база доступна по имени сервиса и порту 5432.
+      DATABASE_URL: postgresql+asyncpg://payments:payments@db:5432/payments
+      # Значение для разработки. В реальной среде задайте свой: WEBHOOK_SECRET=... docker compose up
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:-change-me}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   pgdata:
