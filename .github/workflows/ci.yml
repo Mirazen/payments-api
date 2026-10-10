@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    services:
+      # Тесты создают базу payments_test сами, им нужен только сервер Postgres.
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: payments
+          POSTGRES_PASSWORD: payments
+          POSTGRES_DB: payments
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U payments -d payments"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://payments:payments@localhost:5432/payments
+      # WEBHOOK_SECRET для тестов не нужен: тесты передают свой секрет в create_app.
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.10.4"
+          enable-cache: true
+
+      # --locked: падаем, если uv.lock не соответствует pyproject.toml.
+      # Нужная версия Python берётся из .python-version.
+      - run: uv sync --locked
+
+      - run: uv run ruff check
+
+      - run: uv run ruff format --check
+
+      - run: uv run pytest
