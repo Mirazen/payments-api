@@ -1,4 +1,4 @@
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -12,7 +12,7 @@ def create_app(database_url: str, webhook_secret: str, *, use_pool: bool = True)
     """Собирает приложение. Тесты передают свою базу, свой секрет и use_pool=False."""
 
     @asynccontextmanager
-    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         # Движок создаётся при старте, а не при импорте модуля.
         engine = create_engine(database_url, use_pool=use_pool)
         app.state.session_factory = create_session_factory(engine)
